@@ -1,0 +1,14 @@
+[package]
+name = "alternator-driver"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+aws-sdk-dynamodb = { version = "1.100.0", features = ["test-util"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
+hyper = { version = "1.8", features = ["client", "server", "http1"] }
+http = "1.0"
+http-body-util = "0.1"
+hyper-util = "0.1"
