@@ -26,6 +26,7 @@ async fn empty_test() {
             common::run_server("localhost:7999", "localhost:8000", on_request).await;
         }),
         tokio::spawn(async {
+            tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
             common::make_calls(client).await;
         })
     )
