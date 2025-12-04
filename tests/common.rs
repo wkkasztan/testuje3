@@ -50,42 +50,65 @@ pub async fn acquire_dynamodb_response(
     Response::from_parts(parts, body)
 }
 
-pub async fn run_server<F, Fut>(proxy_address: &str, alternator_address: &str, on_request: F)
-where
-    F: Fn(Request<Incoming>, Arc<Mutex<SendRequest<Full<Bytes>>>>) -> Fut + Send + Sync + 'static,
-    Fut: Future<Output = Response<Full<Bytes>>> + Send,
-{
-    // alternator
+pub async fn start_server(
+    listen_address: &str,
+    alternator_address: &str,
+) -> (
+    SendRequest<Full<Bytes>>,
+    hyper_client::Connection<TokioIo<TcpStream>, Full<Bytes>>,
+    TcpListener,
+) {
+    // connect to alternator
     let stream = TcpStream::connect(alternator_address).await.unwrap();
     let stream = TokioIo::new(stream);
     let client = hyper_client::Builder::new();
     let (sender, connection) = client.handshake::<_, Full<Bytes>>(stream).await.unwrap();
-    let alternator_task = tokio::spawn(async move {
-        connection.await.unwrap();
-    });
 
-    // dynamodb
-    let listener = TcpListener::bind(proxy_address).await.unwrap();
-    let stream = listener.accept().await.unwrap().0;
+    // bind listen address for dynamodb
+    let listener = TcpListener::bind(listen_address).await.unwrap();
+
+    (sender, connection, listener)
+}
+
+pub async fn run_server<F, Fut>(
+    alternator_sender: SendRequest<Full<Bytes>>,
+    alternator_connection: hyper_client::Connection<TokioIo<TcpStream>, Full<Bytes>>,
+    dynamodb_listener: TcpListener,
+    on_request: F,
+) where
+    F: Fn(Request<Incoming>, Arc<Mutex<SendRequest<Full<Bytes>>>>) -> Fut + Send + Sync + 'static,
+    Fut: Future<Output = Response<Full<Bytes>>> + Send,
+{
+    // listen for dynamodb
+    let stream = dynamodb_listener.accept().await.unwrap().0;
     let stream = TokioIo::new(stream);
-    let server = hyper_server::Builder::new();
-    let sender = Arc::new(Mutex::new(sender));
+
+    // construct service
+    let alternator_sender = Arc::new(Mutex::new(alternator_sender));
     let on_request = Arc::new(on_request);
+
     let service = service_fn(move |request| {
-        let sender = sender.clone();
+        let sender = alternator_sender.clone();
         let on_request = on_request.clone();
         async move {
             let response = on_request(request, sender).await;
             Ok::<_, hyper::Error>(response)
         }
     });
-    let connection = server.serve_connection(stream, service);
-    let dynamodb_task = tokio::spawn(async move {
-        connection.await.unwrap();
-    });
 
-    // await
-    tokio::try_join!(dynamodb_task, alternator_task).unwrap();
+    let server = hyper_server::Builder::new();
+    let dynamodb_connection = server.serve_connection(stream, service);
+
+    // run
+    tokio::try_join!(
+        tokio::spawn(async move {
+            alternator_connection.await.unwrap();
+        }),
+        tokio::spawn(async move {
+            dynamodb_connection.await.unwrap();
+        })
+    )
+    .unwrap();
 }
 
 pub async fn make_calls(client: dynamodb::Client) {
