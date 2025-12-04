@@ -21,12 +21,13 @@ async fn empty_test() {
 
     let client = dynamodb::Client::from_conf(config);
 
+    let proxy = common::start_server("localhost:7999", "localhost:8000").await;
+
     tokio::try_join!(
         tokio::spawn(async {
-            common::run_server("localhost:7999", "localhost:8000", on_request).await;
+            common::run_server(proxy.0, proxy.1, proxy.2, on_request).await;
         }),
         tokio::spawn(async {
-            tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
             common::make_calls(client).await;
         })
     )
