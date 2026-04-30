@@ -10,10 +10,9 @@ services:
       --alternator-write-isolation always
       --alternator-port 8000
     ports:
-      - "9042:9042"
       - "8000:8000"
     healthcheck:
-      test: [ "CMD", "cqlsh", "127.0.0.1", "9042", "-e", "select * from system.local WHERE key='local'" ]
+      test: ["CMD-SHELL", "curl -X POST http://localhost:8000/ -H 'X-Amz-Target: DynamoDB_20120810.DescribeLimits' -d '{}' -f || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 60
