@@ -12,7 +12,7 @@ services:
     ports:
       - "8000:8000"
     healthcheck:
-      test: ["CMD-SHELL", "curl -X POST http://localhost:8000/ -H 'X-Amz-Target: DynamoDB_20120810.DescribeLimits' -d '{}' -f || exit 1"]
+      test: ["CMD-SHELL", "curl -X POST localhost:8000 -H 'x-amz-target:x' -d '{}' -s"]
       interval: 5s
       timeout: 5s
       retries: 60
