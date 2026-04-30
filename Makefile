@@ -26,11 +26,15 @@ clippy:
 test: up
 	cargo test
 
+.PHONY: ccm-wrapper-tests
+ccm-wrapper-tests:
+	RUSTFLAGS="--cfg ccm_tests" cargo test --test ccm_wrapper_tests -- --nocapture
+
 .PHONY: up
 up:
 	$(COMPOSE) up -d --wait
 	@echo
-	@echo "A 2-node cluster is running in the background. Use 'make down' to stop it and remove all the volumes."
+	@echo "A 1-node cluster is running in the background. Use 'make down' to stop it and remove its volume."
 	@echo
 
 .PHONY: down
@@ -43,11 +47,11 @@ logs:
 
 .PHONY: cqlsh
 cqlsh:
-	$(COMPOSE) exec scylla1 cqlsh -u cassandra -p cassandra
+	$(COMPOSE) exec scylla cqlsh -u cassandra -p cassandra
 
 .PHONY: shell
 shell:
-	$(COMPOSE) exec scylla1 bash
+	$(COMPOSE) exec scylla bash
 
 .PHONY: volumes
 volumes:
