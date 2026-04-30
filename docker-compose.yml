@@ -15,7 +15,7 @@ services:
       - "9042:9042"
       - "8000:8000"
     healthcheck:
-      test: [ "CMD", "cqlsh", "scylla", "-e", "select * from system.local WHERE key='local'" ]
+      test: ["CMD", "cqlsh", "-e", "describe keyspaces"]
       interval: 5s
       timeout: 5s
       retries: 60
