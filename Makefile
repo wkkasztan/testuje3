@@ -47,11 +47,11 @@ logs:
 
 .PHONY: cqlsh
 cqlsh:
-	$(COMPOSE) exec scylla cqlsh -u cassandra -p cassandra
+	$(COMPOSE) exec scylla_node cqlsh -u cassandra -p cassandra
 
 .PHONY: shell
 shell:
-	$(COMPOSE) exec scylla bash
+	$(COMPOSE) exec scylla_node bash
 
 .PHONY: volumes
 volumes:
